@@ -1,0 +1,48 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject HttpClient http;
+
+<h1> @_hubConnection?.ConnectionId</h1>
+
+@foreach (var message in _messages)
+{
+    <p>@message</p>
+}
+
+<MudTextField T="string" @bind-Value="message"></MudTextField>
+<MudButton OnClick="SendMessage"> Send </MudButton>
+
+
+@code {
+    private string? message { get; set; }
+    private HubConnection? _hubConnection;
+    private List<string> _messages = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7067/chathub")
+            .Build();
+
+        _hubConnection.On<string,string>("GetMessage",GetMessage); //todo 
+        //if request from server comes as getmessage method,                                                             
+        //then we are telling that we have to redirect him to method GetMessage which is in blazor;
+
+        await _hubConnection.StartAsync();
+    }
+
+    private void GetMessage(string username,string message)
+    {
+        _messages.Add($"{username}: {message}");
+        StateHasChanged();
+    }
+
+    private async Task SendMessage()
+    {
+        if(_hubConnection!.State == HubConnectionState.Connected) //if client is connected thnen we have to send the message to server;
+        {
+            await _hubConnection.InvokeAsync(nameof(SendMessage), message ?? "Hello"); 
+        }
+    }
+}
+

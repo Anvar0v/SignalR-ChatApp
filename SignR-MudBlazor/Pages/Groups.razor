@@ -1,0 +1,49 @@
+﻿@page "/groups/{GroupName}"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject HttpClient http;
+<h3>@GroupName</h3>
+
+<MudTextField T="string" @bind-Value="message"></MudTextField>
+<MudButton OnClick="SendMessage"> Send </MudButton>
+
+@foreach (var _message in _messages)
+{
+    <p>@_message</p>
+}
+
+@code {
+    [Parameter]
+    public string? GroupName { get; set; }
+
+    private string? message { get; set; }
+    private HubConnection? _hubConnection;
+    private List<string> _messages = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7067/chathub")
+            .Build();
+
+        _hubConnection.On<string, string>("GetMessage", GetMessage);
+
+        await _hubConnection.StartAsync();
+        await _hubConnection.InvokeAsync("JoinGroup", GroupName);
+
+        _messages = await http.GetFromJsonAsync<List<string>?>($"https://localhost:7067/api/Values/groups/{GroupName}");
+    }
+
+    private void GetMessage(string username, string message)
+    {
+        _messages.Add($"{username}: {message}");
+        StateHasChanged();
+    }
+
+    private async Task SendMessage()
+    {
+        if (_hubConnection!.State == HubConnectionState.Connected) //if client is connected tnen we have to send the message to server;
+        {
+            await _hubConnection.InvokeAsync("SendMessageToGroup", GroupName,message ?? "Hello");
+        }
+    }
+}

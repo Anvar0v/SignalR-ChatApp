@@ -1,0 +1,26 @@
+﻿@page "/groups"
+<h3>GroupsList</h3>
+@inject HttpClient http;
+
+@if(_groups is null)
+{
+    <h4> empty</h4>
+}
+else
+{
+    foreach (var group in _groups)
+    {
+        var groupLink = $"/groups/{group}";
+        <MudLink Href="@groupLink">@group</MudLink><br />
+
+    }
+}
+
+@code {
+    private List<string> _groups = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _groups = await http.GetFromJsonAsync<List<string>>("https://localhost:7067/api/Values/groups");
+    }
+}
